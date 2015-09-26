@@ -1,6 +1,8 @@
 /*! wavesurfer.js 1.0.42
  * https://github.com/katspaugh/wavesurfer.js
  * @license CC-BY-3.0 */
+var global;
+
 "use strict";
 var WaveSurfer = {
 	defaultParams: {
@@ -28,6 +30,8 @@ var WaveSurfer = {
 		mediaType: "audio"
 	},
 	init: function(a) {
+		global = this;
+
 		if (this.params = WaveSurfer.util.extend({}, this.defaultParams, a), this.container = "string" == typeof a.container ? document.querySelector(this.params.container) : this.params.container, !this.container) throw new Error("Container element not found");
 		if ("undefined" == typeof this.params.mediaContainer ? this.mediaContainer = this.container : "string" == typeof this.params.mediaContainer ? this.mediaContainer = document.querySelector(this.params.mediaContainer) : this.mediaContainer = this.params.mediaContainer, !this.mediaContainer) throw new Error("Media Container element not found");
 		this.savedVolume = 0, this.isMuted = !1, this.tmpEvents = [], this.createDrawer(), this.createBackend()
@@ -53,7 +57,8 @@ var WaveSurfer = {
 		}), this.backend.on("pause", function() {
 			a.fireEvent("pause")
 		}), this.backend.on("audioprocess", function(b) {
-			a.drawer.progress(a.backend.getPlayedPercents()), a.fireEvent("audioprocess", b)
+			// console.log('processing', a.backend.getPlayedPercents())
+			a.drawer.progress(a.backend.getPlayedPercents()), a.fireEvent('audioprocess', b)
 		})
 	},
 	getDuration: function() {
@@ -91,6 +96,7 @@ var WaveSurfer = {
 	seekTo: function(a) {
 		var b = this.backend.isPaused(),
 			c = this.params.scrollParent;
+
 		b && (this.params.scrollParent = !1), this.backend.seekTo(a * this.getDuration()), this.drawer.progress(this.backend.getPlayedPercents()), b || (this.backend.pause(), this.backend.play()), this.params.scrollParent = c, this.fireEvent("seek", a)
 	},
 	stop: function() {
@@ -207,548 +213,731 @@ var WaveSurfer = {
 	}
 };
 WaveSurfer.create = function(a) {
-	var b = Object.create(WaveSurfer);
-	return b.init(a), b
-}, WaveSurfer.util = {
-	extend: function(a) {
-		var b = Array.prototype.slice.call(arguments, 1);
-		return b.forEach(function(b) {
-			Object.keys(b).forEach(function(c) {
-				a[c] = b[c]
-			})
-		}), a
-	},
-	getId: function() {
-		return "wavesurfer_" + Math.random().toString(32).substring(2)
-	},
-	ajax: function(a) {
-		var b = Object.create(WaveSurfer.Observer),
-			c = new XMLHttpRequest,
-			d = !1;
-		return c.open(a.method || "GET", a.url, !0), c.responseType = a.responseType || "json", c.addEventListener("progress", function(a) {
-			b.fireEvent("progress", a), a.lengthComputable && a.loaded == a.total && (d = !0)
-		}), c.addEventListener("load", function(a) {
-			d || b.fireEvent("progress", a), b.fireEvent("load", a), 200 == c.status || 206 == c.status ? b.fireEvent("success", c.response, a) : b.fireEvent("error", a)
-		}), c.addEventListener("error", function(a) {
-			b.fireEvent("error", a)
-		}), c.send(), b.xhr = c, b
-	}
-}, WaveSurfer.Observer = {
-	on: function(a, b) {
-		this.handlers || (this.handlers = {});
-		var c = this.handlers[a];
-		return c || (c = this.handlers[a] = []), c.push(b), {
-			name: a,
-			callback: b,
-			un: this.un.bind(this, a, b)
+		var b = Object.create(WaveSurfer);
+		return b.init(a), b
+	}, WaveSurfer.util = {
+		extend: function(a) {
+			var b = Array.prototype.slice.call(arguments, 1);
+			return b.forEach(function(b) {
+				Object.keys(b).forEach(function(c) {
+					a[c] = b[c]
+				})
+			}), a
+		},
+		getId: function() {
+			return "wavesurfer_" + Math.random().toString(32).substring(2)
+		},
+		ajax: function(a) {
+			var b = Object.create(WaveSurfer.Observer),
+				c = new XMLHttpRequest,
+				d = !1;
+			return c.open(a.method || "GET", a.url, !0), c.responseType = a.responseType || "json", c.addEventListener("progress", function(a) {
+				b.fireEvent("progress", a), a.lengthComputable && a.loaded == a.total && (d = !0)
+			}), c.addEventListener("load", function(a) {
+				d || b.fireEvent("progress", a), b.fireEvent("load", a), 200 == c.status || 206 == c.status ? b.fireEvent("success", c.response, a) : b.fireEvent("error", a)
+			}), c.addEventListener("error", function(a) {
+				b.fireEvent("error", a)
+			}), c.send(), b.xhr = c, b
 		}
-	},
-	un: function(a, b) {
-		if (this.handlers) {
+	}, WaveSurfer.Observer = {
+		on: function(a, b) {
+			this.handlers || (this.handlers = {});
 			var c = this.handlers[a];
-			if (c)
-				if (b)
-					for (var d = c.length - 1; d >= 0; d--) c[d] == b && c.splice(d, 1);
-				else c.length = 0
+			return c || (c = this.handlers[a] = []), c.push(b), {
+				name: a,
+				callback: b,
+				un: this.un.bind(this, a, b)
+			}
+		},
+		un: function(a, b) {
+			if (this.handlers) {
+				var c = this.handlers[a];
+				if (c)
+					if (b)
+						for (var d = c.length - 1; d >= 0; d--) c[d] == b && c.splice(d, 1);
+					else c.length = 0
+			}
+		},
+		unAll: function() {
+			this.handlers = null
+		},
+		once: function(a, b) {
+			var c = this,
+				d = function() {
+					b.apply(this, arguments), setTimeout(function() {
+						c.un(a, d)
+					}, 0)
+				};
+			return this.on(a, d)
+		},
+		fireEvent: function(a) {
+			// console.log('firing', a)
+			// console.log('the handlers are', this.handlers)
+			if (this.handlers) {
+				var b = this.handlers[a],
+					c = Array.prototype.slice.call(arguments, 1);
+				b && b.forEach(function(a) {
+					a.apply(null, c)
+				})
+			}
 		}
-	},
-	unAll: function() {
-		this.handlers = null
-	},
-	once: function(a, b) {
-		var c = this,
-			d = function() {
-				b.apply(this, arguments), setTimeout(function() {
-					c.un(a, d)
-				}, 0)
-			};
-		return this.on(a, d)
-	},
-	fireEvent: function(a) {
-		if (this.handlers) {
-			var b = this.handlers[a],
-				c = Array.prototype.slice.call(arguments, 1);
-			b && b.forEach(function(a) {
-				a.apply(null, c)
-			})
-		}
-	}
-}, WaveSurfer.util.extend(WaveSurfer, WaveSurfer.Observer), WaveSurfer.WebAudio = {
-	scriptBufferSize: 256,
-	PLAYING_STATE: 0,
-	PAUSED_STATE: 1,
-	FINISHED_STATE: 2,
-	supportsWebAudio: function() {
-		return !(!window.AudioContext && !window.webkitAudioContext)
-	},
-	getAudioContext: function() {
-		return WaveSurfer.WebAudio.audioContext || (WaveSurfer.WebAudio.audioContext = new(window.AudioContext || window.webkitAudioContext)), WaveSurfer.WebAudio.audioContext
-	},
-	getOfflineAudioContext: function(a) {
-		return WaveSurfer.WebAudio.offlineAudioContext || (WaveSurfer.WebAudio.offlineAudioContext = new(window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 2, a)), WaveSurfer.WebAudio.offlineAudioContext
-	},
-	init: function(a) {
-		this.params = a, this.ac = a.audioContext || this.getAudioContext(), this.lastPlay = this.ac.currentTime, this.startPosition = 0, this.scheduledPause = null, this.states = [Object.create(WaveSurfer.WebAudio.state.playing), Object.create(WaveSurfer.WebAudio.state.paused), Object.create(WaveSurfer.WebAudio.state.finished)], this.createVolumeNode(), this.createScriptNode(), this.createAnalyserNode(), this.setState(this.PAUSED_STATE), this.setPlaybackRate(this.params.audioRate)
-	},
-	disconnectFilters: function() {
-		this.filters && (this.filters.forEach(function(a) {
-			a && a.disconnect()
-		}), this.filters = null, this.analyser.connect(this.gainNode))
-	},
-	setState: function(a) {
-		this.state !== this.states[a] && (this.state = this.states[a], this.state.init.call(this))
-	},
-	setFilter: function() {
-		this.setFilters([].slice.call(arguments))
-	},
-	setFilters: function(a) {
-		this.disconnectFilters(), a && a.length && (this.filters = a, this.analyser.disconnect(), a.reduce(function(a, b) {
-			return a.connect(b), b
-		}, this.analyser).connect(this.gainNode))
-	},
-	createScriptNode: function() {
-		this.ac.createScriptProcessor ? this.scriptNode = this.ac.createScriptProcessor(this.scriptBufferSize) : this.scriptNode = this.ac.createJavaScriptNode(this.scriptBufferSize), this.scriptNode.connect(this.ac.destination)
-	},
-	addOnAudioProcess: function() {
-		var a = this;
-		this.scriptNode.onaudioprocess = function() {
-			var b = a.getCurrentTime();
-			b >= a.getDuration() ? (a.setState(a.FINISHED_STATE), a.fireEvent("pause")) : b >= a.scheduledPause ? (a.setState(a.PAUSED_STATE), a.fireEvent("pause")) : a.state === a.states[a.PLAYING_STATE] && a.fireEvent("audioprocess", b)
-		}
-	},
-	removeOnAudioProcess: function() {
-		this.scriptNode.onaudioprocess = null
-	},
-	createAnalyserNode: function() {
-		this.analyser = this.ac.createAnalyser(), this.analyser.connect(this.gainNode)
-	},
-	createVolumeNode: function() {
-		this.ac.createGain ? this.gainNode = this.ac.createGain() : this.gainNode = this.ac.createGainNode(), this.gainNode.connect(this.ac.destination)
-	},
-	setVolume: function(a) {
-		this.gainNode.gain.value = a
-	},
-	getVolume: function() {
-		return this.gainNode.gain.value
-	},
-	decodeArrayBuffer: function(a, b, c) {
-		this.offlineAc || (this.offlineAc = this.getOfflineAudioContext(this.ac ? this.ac.sampleRate : 44100)), this.offlineAc.decodeAudioData(a, function(a) {
-			b(a)
-		}.bind(this), c)
-	},
-	getPeaks: function(a) {
-		for (var b = this.buffer.length / a, c = ~~(b / 10) || 1, d = this.buffer.numberOfChannels, e = [], f = [], g = 0; d > g; g++)
-			for (var h = e[g] = [], i = this.buffer.getChannelData(g), j = 0; a > j; j++) {
-				for (var k = ~~(j * b), l = ~~(k + b), m = i[0], n = i[0], o = k; l > o; o += c) {
-					var p = i[o];
-					p > n && (n = p), m > p && (m = p)
+	}, WaveSurfer.util.extend(WaveSurfer, WaveSurfer.Observer), WaveSurfer.WebAudio = {
+		scriptBufferSize: 256,
+		PLAYING_STATE: 0,
+		PAUSED_STATE: 1,
+		FINISHED_STATE: 2,
+		supportsWebAudio: function() {
+			return !(!window.AudioContext && !window.webkitAudioContext)
+		},
+		getAudioContext: function() {
+			return WaveSurfer.WebAudio.audioContext || (WaveSurfer.WebAudio.audioContext = new(window.AudioContext || window.webkitAudioContext)), WaveSurfer.WebAudio.audioContext
+		},
+		getOfflineAudioContext: function(a) {
+			return WaveSurfer.WebAudio.offlineAudioContext || (WaveSurfer.WebAudio.offlineAudioContext = new(window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 2, a)), WaveSurfer.WebAudio.offlineAudioContext
+		},
+		init: function(a) {
+			this.params = a, this.ac = a.audioContext || this.getAudioContext(), this.lastPlay = this.ac.currentTime, this.startPosition = 0, this.scheduledPause = null, this.states = [Object.create(WaveSurfer.WebAudio.state.playing), Object.create(WaveSurfer.WebAudio.state.paused), Object.create(WaveSurfer.WebAudio.state.finished)], this.createVolumeNode(), this.createScriptNode(), this.createAnalyserNode(), this.setState(this.PAUSED_STATE), this.setPlaybackRate(this.params.audioRate)
+		},
+		disconnectFilters: function() {
+			this.filters && (this.filters.forEach(function(a) {
+				a && a.disconnect()
+			}), this.filters = null, this.analyser.connect(this.gainNode))
+		},
+		setState: function(a) {
+			this.state !== this.states[a] && (this.state = this.states[a], this.state.init.call(this))
+		},
+		setFilter: function() {
+			this.setFilters([].slice.call(arguments))
+		},
+		setFilters: function(a) {
+			this.disconnectFilters(), a && a.length && (this.filters = a, this.analyser.disconnect(), a.reduce(function(a, b) {
+				return a.connect(b), b
+			}, this.analyser).connect(this.gainNode))
+		},
+		createScriptNode: function() {
+			this.ac.createScriptProcessor ? this.scriptNode = this.ac.createScriptProcessor(this.scriptBufferSize) : this.scriptNode = this.ac.createJavaScriptNode(this.scriptBufferSize), this.scriptNode.connect(this.ac.destination)
+		},
+		addOnAudioProcess: function() {
+			var a = this;
+			this.scriptNode.onaudioprocess = function() {
+				var b = a.getCurrentTime();
+				b >= a.getDuration() ? (a.setState(a.FINISHED_STATE), a.fireEvent("pause")) : b >= a.scheduledPause ? (a.setState(a.PAUSED_STATE), a.fireEvent("pause")) : a.state === a.states[a.PLAYING_STATE] && a.fireEvent("audioprocess", b)
+			}
+		},
+		removeOnAudioProcess: function() {
+			this.scriptNode.onaudioprocess = null
+		},
+		createAnalyserNode: function() {
+			this.analyser = this.ac.createAnalyser(), this.analyser.connect(this.gainNode)
+		},
+		createVolumeNode: function() {
+			this.ac.createGain ? this.gainNode = this.ac.createGain() : this.gainNode = this.ac.createGainNode(), this.gainNode.connect(this.ac.destination)
+		},
+		setVolume: function(a) {
+			this.gainNode.gain.value = a
+		},
+		getVolume: function() {
+			return this.gainNode.gain.value
+		},
+		decodeArrayBuffer: function(a, b, c) {
+			this.offlineAc || (this.offlineAc = this.getOfflineAudioContext(this.ac ? this.ac.sampleRate : 44100)), this.offlineAc.decodeAudioData(a, function(a) {
+				b(a)
+			}.bind(this), c)
+		},
+		getPeaks: function(a) {
+			for (var b = this.buffer.length / a, c = ~~(b / 10) || 1, d = this.buffer.numberOfChannels, e = [], f = [], g = 0; d > g; g++)
+				for (var h = e[g] = [], i = this.buffer.getChannelData(g), j = 0; a > j; j++) {
+					for (var k = ~~(j * b), l = ~~(k + b), m = i[0], n = i[0], o = k; l > o; o += c) {
+						var p = i[o];
+						p > n && (n = p), m > p && (m = p)
+					}
+					h[2 * j] = n, h[2 * j + 1] = m, (0 == g || n > f[2 * j]) && (f[2 * j] = n), (0 == g || m < f[2 * j + 1]) && (f[2 * j + 1] = m)
 				}
-				h[2 * j] = n, h[2 * j + 1] = m, (0 == g || n > f[2 * j]) && (f[2 * j] = n), (0 == g || m < f[2 * j + 1]) && (f[2 * j + 1] = m)
+			return this.params.splitChannels ? e : f
+		},
+		getPlayedPercents: function() {
+			return this.state.getPlayedPercents.call(this)
+		},
+		disconnectSource: function() {
+			this.source && this.source.disconnect()
+		},
+		destroy: function() {
+			this.isPaused() || this.pause(), this.unAll(), this.buffer = null, this.disconnectFilters(), this.disconnectSource(), this.gainNode.disconnect(), this.scriptNode.disconnect(), this.analyser.disconnect()
+		},
+		load: function(a) {
+			this.startPosition = 0, this.lastPlay = this.ac.currentTime, this.buffer = a, this.createSource()
+		},
+		createSource: function() {
+			this.disconnectSource(), this.source = this.ac.createBufferSource(), this.source.start = this.source.start || this.source.noteGrainOn, this.source.stop = this.source.stop || this.source.noteOff, this.source.playbackRate.value = this.playbackRate, this.source.buffer = this.buffer, this.source.connect(this.analyser)
+		},
+		isPaused: function() {
+			return this.state !== this.states[this.PLAYING_STATE]
+		},
+		getDuration: function() {
+			return this.buffer ? this.buffer.duration : 0
+		},
+		seekTo: function(a, b) {
+			return this.scheduledPause = null, null == a && (a = this.getCurrentTime(), a >= this.getDuration() && (a = 0)), null == b && (b = this.getDuration()), this.startPosition = a, this.lastPlay = this.ac.currentTime, this.state === this.states[this.FINISHED_STATE] && this.setState(this.PAUSED_STATE), {
+				start: a,
+				end: b
 			}
-		return this.params.splitChannels ? e : f
-	},
-	getPlayedPercents: function() {
-		return this.state.getPlayedPercents.call(this)
-	},
-	disconnectSource: function() {
-		this.source && this.source.disconnect()
-	},
-	destroy: function() {
-		this.isPaused() || this.pause(), this.unAll(), this.buffer = null, this.disconnectFilters(), this.disconnectSource(), this.gainNode.disconnect(), this.scriptNode.disconnect(), this.analyser.disconnect()
-	},
-	load: function(a) {
-		this.startPosition = 0, this.lastPlay = this.ac.currentTime, this.buffer = a, this.createSource()
-	},
-	createSource: function() {
-		this.disconnectSource(), this.source = this.ac.createBufferSource(), this.source.start = this.source.start || this.source.noteGrainOn, this.source.stop = this.source.stop || this.source.noteOff, this.source.playbackRate.value = this.playbackRate, this.source.buffer = this.buffer, this.source.connect(this.analyser)
-	},
-	isPaused: function() {
-		return this.state !== this.states[this.PLAYING_STATE]
-	},
-	getDuration: function() {
-		return this.buffer ? this.buffer.duration : 0
-	},
-	seekTo: function(a, b) {
-		return this.scheduledPause = null, null == a && (a = this.getCurrentTime(), a >= this.getDuration() && (a = 0)), null == b && (b = this.getDuration()), this.startPosition = a, this.lastPlay = this.ac.currentTime, this.state === this.states[this.FINISHED_STATE] && this.setState(this.PAUSED_STATE), {
-			start: a,
-			end: b
+		},
+		getPlayedTime: function() {
+			return (this.ac.currentTime - this.lastPlay) * this.playbackRate
+		},
+		play: function(a, b) {
+			this.createSource();
+			var c = this.seekTo(a, b);
+			a = c.start, b = c.end, this.scheduledPause = b, this.source.start(0, a, b - a), this.setState(this.PLAYING_STATE), this.fireEvent("play")
+		},
+		pause: function() {
+			this.scheduledPause = null, this.startPosition += this.getPlayedTime(), this.source && this.source.stop(0), this.setState(this.PAUSED_STATE), this.fireEvent("pause")
+		},
+		getCurrentTime: function() {
+			return this.state.getCurrentTime.call(this)
+		},
+		setPlaybackRate: function(a) {
+			a = a || 1, this.isPaused() ? this.playbackRate = a : (this.pause(), this.playbackRate = a, this.play())
 		}
-	},
-	getPlayedTime: function() {
-		return (this.ac.currentTime - this.lastPlay) * this.playbackRate
-	},
-	play: function(a, b) {
-		this.createSource();
-		var c = this.seekTo(a, b);
-		a = c.start, b = c.end, this.scheduledPause = b, this.source.start(0, a, b - a), this.setState(this.PLAYING_STATE), this.fireEvent("play")
-	},
-	pause: function() {
-		this.scheduledPause = null, this.startPosition += this.getPlayedTime(), this.source && this.source.stop(0), this.setState(this.PAUSED_STATE), this.fireEvent("pause")
-	},
-	getCurrentTime: function() {
-		return this.state.getCurrentTime.call(this)
-	},
-	setPlaybackRate: function(a) {
-		a = a || 1, this.isPaused() ? this.playbackRate = a : (this.pause(), this.playbackRate = a, this.play())
-	}
-}, WaveSurfer.WebAudio.state = {}, WaveSurfer.WebAudio.state.playing = {
-	init: function() {
-		this.addOnAudioProcess()
-	},
-	getPlayedPercents: function() {
-		var a = this.getDuration();
-		return this.getCurrentTime() / a || 0
-	},
-	getCurrentTime: function() {
-		return this.startPosition + this.getPlayedTime()
-	}
-}, WaveSurfer.WebAudio.state.paused = {
-	init: function() {
-		this.removeOnAudioProcess()
-	},
-	getPlayedPercents: function() {
-		var a = this.getDuration();
-		return this.getCurrentTime() / a || 0
-	},
-	getCurrentTime: function() {
-		return this.startPosition
-	}
-}, WaveSurfer.WebAudio.state.finished = {
-	init: function() {
-		this.removeOnAudioProcess(), this.fireEvent("finish")
-	},
-	getPlayedPercents: function() {
-		return 1
-	},
-	getCurrentTime: function() {
-		return this.getDuration()
-	}
-}, WaveSurfer.util.extend(WaveSurfer.WebAudio, WaveSurfer.Observer), WaveSurfer.MediaElement = Object.create(WaveSurfer.WebAudio), WaveSurfer.util.extend(WaveSurfer.MediaElement, {
-	init: function(a) {
-		this.params = a, this.media = {
-			currentTime: 0,
-			duration: 0,
-			paused: !0,
-			playbackRate: 1,
-			play: function() {},
-			pause: function() {}
-		}, this.mediaType = a.mediaType.toLowerCase(), this.elementPosition = a.elementPosition
-	},
-	load: function(a, b, c) {
-		var d = this,
-			e = document.createElement(this.mediaType);
-		e.controls = !1, e.autoplay = !1, e.preload = "auto", e.src = a, e.addEventListener("error", function() {
-			d.fireEvent("error", "Error loading media element")
-		}), e.addEventListener("canplay", function() {
-			d.fireEvent("canplay")
-		}), e.addEventListener("ended", function() {
-			d.fireEvent("finish")
-		}), e.addEventListener("timeupdate", function() {
-			d.fireEvent("audioprocess", d.getCurrentTime())
-		});
-		var f = b.querySelector(this.mediaType);
-		f && b.removeChild(f), b.appendChild(e), this.media = e, this.peaks = c, this.onPlayEnd = null, this.buffer = null, this.setPlaybackRate(this.playbackRate)
-	},
-	isPaused: function() {
-		return !this.media || this.media.paused
-	},
-	getDuration: function() {
-		var a = this.media.duration;
-		return a >= 1 / 0 && (a = this.media.seekable.end()), a
-	},
-	getCurrentTime: function() {
-		return this.media && this.media.currentTime
-	},
-	getPlayedPercents: function() {
-		return this.getCurrentTime() / this.getDuration() || 0
-	},
-	setPlaybackRate: function(a) {
-		this.playbackRate = a || 1, this.media.playbackRate = this.playbackRate
-	},
-	seekTo: function(a) {
-		null != a && (this.media.currentTime = a), this.clearPlayEnd()
-	},
-	play: function(a, b) {
-		this.seekTo(a), this.media.play(), b && this.setPlayEnd(b), this.fireEvent("play")
-	},
-	pause: function() {
-		this.media && this.media.pause(), this.clearPlayEnd(), this.fireEvent("pause")
-	},
-	setPlayEnd: function(a) {
-		var b = this;
-		this.onPlayEnd = function(c) {
-			c >= a && (b.pause(), b.seekTo(a))
-		}, this.on("audioprocess", this.onPlayEnd)
-	},
-	clearPlayEnd: function() {
-		this.onPlayEnd && (this.un("audioprocess", this.onPlayEnd), this.onPlayEnd = null)
-	},
-	getPeaks: function(a) {
-		return this.buffer ? WaveSurfer.WebAudio.getPeaks.call(this, a) : this.peaks || []
-	},
-	getVolume: function() {
-		return this.media.volume
-	},
-	setVolume: function(a) {
-		this.media.volume = a
-	},
-	destroy: function() {
-		this.pause(), this.unAll(), this.media && this.media.parentNode && this.media.parentNode.removeChild(this.media), this.media = null
-	}
-}), WaveSurfer.AudioElement = WaveSurfer.MediaElement, WaveSurfer.Drawer = {
-	init: function(a, b) {
-		this.container = a, this.params = b, this.width = 0, this.height = b.height * this.params.pixelRatio, this.lastPos = 0, this.createWrapper(), this.createElements()
-	},
-	createWrapper: function() {
-		this.wrapper = this.container.appendChild(document.createElement("wave")), this.style(this.wrapper, {
-			display: "block",
-			position: "relative",
-			userSelect: "none",
-			webkitUserSelect: "none",
-			height: this.params.height + "px"
-		}), (this.params.fillParent || this.params.scrollParent) && this.style(this.wrapper, {
-			width: "100%",
-			overflowX: this.params.hideScrollbar ? "hidden" : "auto",
-			overflowY: "hidden"
-		}), this.setupWrapperEvents()
-	},
-	handleEvent: function(a) {
-		a.preventDefault();
-		var b = this.wrapper.getBoundingClientRect();
-		return (a.clientX - b.left + this.wrapper.scrollLeft) / this.wrapper.scrollWidth || 0
-	},
-	setupWrapperEvents: function() {
-		var a = this;
-		this.wrapper.addEventListener("click", function(b) {
-			var c = a.wrapper.offsetHeight - a.wrapper.clientHeight;
-			if (0 != c) {
-				var d = a.wrapper.getBoundingClientRect();
-				if (b.clientY >= d.bottom - c) return
-			}
-			a.params.interact && a.fireEvent("click", b, a.handleEvent(b))
-		}), this.wrapper.addEventListener("scroll", function(b) {
-			a.fireEvent("scroll", b)
-		})
-	},
-	drawPeaks: function(a, b) {
-		this.resetScroll(), this.setWidth(b), this.params.barWidth ? this.drawBars(a) : this.drawWave(a)
-	},
-	style: function(a, b) {
-		return Object.keys(b).forEach(function(c) {
-			a.style[c] !== b[c] && (a.style[c] = b[c])
-		}), a
-	},
-	resetScroll: function() {
-		null !== this.wrapper && (this.wrapper.scrollLeft = 0)
-	},
-	recenter: function(a) {
-		var b = this.wrapper.scrollWidth * a;
-		this.recenterOnPosition(b, !0)
-	},
-	recenterOnPosition: function(a, b) {
-		var c = this.wrapper.scrollLeft,
-			d = ~~(this.wrapper.clientWidth / 2),
-			e = a - d,
-			f = e - c,
-			g = this.wrapper.scrollWidth - this.wrapper.clientWidth;
-		if (0 != g) {
-			if (!b && f >= -d && d > f) {
-				var h = 5;
-				f = Math.max(-h, Math.min(h, f)), e = c + f
-			}
-			e = Math.max(0, Math.min(g, e)), e != c && (this.wrapper.scrollLeft = e)
+	}, WaveSurfer.WebAudio.state = {}, WaveSurfer.WebAudio.state.playing = {
+		init: function() {
+			this.addOnAudioProcess()
+		},
+		getPlayedPercents: function() {
+			var a = this.getDuration();
+			return this.getCurrentTime() / a || 0
+		},
+		getCurrentTime: function() {
+			return this.startPosition + this.getPlayedTime()
 		}
-	},
-	getWidth: function() {
-		return Math.round(this.container.clientWidth * this.params.pixelRatio)
-	},
-	setWidth: function(a) {
-		a != this.width && (this.width = a, this.params.fillParent || this.params.scrollParent ? this.style(this.wrapper, {
-			width: ""
-		}) : this.style(this.wrapper, {
-			width: ~~(this.width / this.params.pixelRatio) + "px"
-		}), this.updateSize())
-	},
-	setHeight: function(a) {
-		a != this.height && (this.height = a, this.style(this.wrapper, {
-			height: ~~(this.height / this.params.pixelRatio) + "px"
-		}), this.updateSize())
-	},
-	progress: function(a) {
-		var b = 1 / this.params.pixelRatio,
-			c = Math.round(a * this.width) * b;
-		if (c < this.lastPos || c - this.lastPos >= b) {
-			if (this.lastPos = c, this.params.scrollParent) {
-				var d = ~~(this.wrapper.scrollWidth * a);
-				this.recenterOnPosition(d)
-			}
-			this.updateProgress(a)
+	}, WaveSurfer.WebAudio.state.paused = {
+		init: function() {
+			this.removeOnAudioProcess()
+		},
+		getPlayedPercents: function() {
+			var a = this.getDuration();
+			return this.getCurrentTime() / a || 0
+		},
+		getCurrentTime: function() {
+			return this.startPosition
 		}
+	}, WaveSurfer.WebAudio.state.finished = {
+		init: function() {
+			this.removeOnAudioProcess(), this.fireEvent("finish")
+		},
+		getPlayedPercents: function() {
+			return 1
+		},
+		getCurrentTime: function() {
+			return this.getDuration()
+		}
+	}, WaveSurfer.util.extend(WaveSurfer.WebAudio, WaveSurfer.Observer), WaveSurfer.MediaElement = Object.create(WaveSurfer.WebAudio), WaveSurfer.util.extend(WaveSurfer.MediaElement, {
+		init: function(a) {
+			this.params = a, this.media = {
+				currentTime: 0,
+				duration: 0,
+				paused: !0,
+				playbackRate: 1,
+				play: function() {},
+				pause: function() {}
+			}, this.mediaType = a.mediaType.toLowerCase(), this.elementPosition = a.elementPosition
+		},
+		load: function(a, b, c) {
+			var d = this,
+				e = document.createElement(this.mediaType);
+			e.controls = !1, e.autoplay = !1, e.preload = "auto", e.src = a, e.addEventListener("error", function() {
+				d.fireEvent("error", "Error loading media element")
+			}), e.addEventListener("canplay", function() {
+				d.fireEvent("canplay")
+			}), e.addEventListener("ended", function() {
+				d.fireEvent("finish")
+			}), e.addEventListener("timeupdate", function() {
+				d.fireEvent("audioprocess", d.getCurrentTime())
+			});
+			var f = b.querySelector(this.mediaType);
+			f && b.removeChild(f), b.appendChild(e), this.media = e, this.peaks = c, this.onPlayEnd = null, this.buffer = null, this.setPlaybackRate(this.playbackRate)
+		},
+		isPaused: function() {
+			return !this.media || this.media.paused
+		},
+		getDuration: function() {
+			var a = this.media.duration;
+			return a >= 1 / 0 && (a = this.media.seekable.end()), a
+		},
+		getCurrentTime: function() {
+			return this.media && this.media.currentTime
+		},
+		getPlayedPercents: function() {
+			return this.getCurrentTime() / this.getDuration() || 0
+		},
+		setPlaybackRate: function(a) {
+			this.playbackRate = a || 1, this.media.playbackRate = this.playbackRate
+		},
+		seekTo: function(a) {
+			null != a && (this.media.currentTime = a), this.clearPlayEnd()
+		},
+		play: function(a, b) {
+			this.seekTo(a), this.media.play(), b && this.setPlayEnd(b), this.fireEvent("play")
+		},
+		pause: function() {
+			this.media && this.media.pause(), this.clearPlayEnd(), this.fireEvent("pause")
+		},
+		setPlayEnd: function(a) {
+			var b = this;
+			this.onPlayEnd = function(c) {
+				c >= a && (b.pause(), b.seekTo(a))
+			}, this.on("audioprocess", this.onPlayEnd)
+		},
+		clearPlayEnd: function() {
+			this.onPlayEnd && (this.un("audioprocess", this.onPlayEnd), this.onPlayEnd = null)
+		},
+		getPeaks: function(a) {
+			return this.buffer ? WaveSurfer.WebAudio.getPeaks.call(this, a) : this.peaks || []
+		},
+		getVolume: function() {
+			return this.media.volume
+		},
+		setVolume: function(a) {
+			this.media.volume = a
+		},
+		destroy: function() {
+			this.pause(), this.unAll(), this.media && this.media.parentNode && this.media.parentNode.removeChild(this.media), this.media = null
+		}
+	}), WaveSurfer.AudioElement = WaveSurfer.MediaElement, WaveSurfer.Drawer = {
+		init: function(a, b) {
+			this.container = a, this.params = b, this.width = 0, this.height = b.height * this.params.pixelRatio, this.lastPos = 0, this.createWrapper(), this.createElements()
+		},
+		createWrapper: function() {
+			this.wrapper = this.container.appendChild(document.createElement("wave")), this.style(this.wrapper, {
+				display: "block",
+				position: "relative",
+				userSelect: "none",
+				webkitUserSelect: "none",
+				height: this.params.height + "px"
+			}), (this.params.fillParent || this.params.scrollParent) && this.style(this.wrapper, {
+				width: "100%",
+				overflowX: this.params.hideScrollbar ? "hidden" : "auto",
+				overflowY: "hidden"
+			}), this.setupWrapperEvents()
+		},
+		handleEvent: function(a) {
+			a.preventDefault();
+			var b = this.wrapper.getBoundingClientRect();
+			return (a.clientX - b.left + this.wrapper.scrollLeft) / this.wrapper.scrollWidth || 0
+		},
+		setupWrapperEvents: function() {
+			var a = this;
+			this.wrapper.addEventListener("click", function(b) {
+					var c = a.wrapper.offsetHeight - a.wrapper.clientHeight;
+					if (0 != c) {
+						var d = a.wrapper.getBoundingClientRect();
+						if (b.clientY >= d.bottom - c) return
+					}
+					a.params.interact && a.fireEvent("click", b, a.handleEvent(b))
+				}), this.wrapper.addEventListener("scroll", function(b) {
+					a.fireEvent("scroll", b)
+				}),
+
+				/* UPDATE WAVEFORM UPON HOVER */
+				this.wrapper.addEventListener("mouseover", function(e) {
+					console.log('entered!');
+					a.wrapper.addEventListener("mousemove", function(movementData) {
+						var cursorPosition = movementData.offsetX / a.container.clientWidth;
+						a.params.interact && a.progressHover(cursorPosition);
+					})
+				}),
+				this.wrapper.addEventListener("mouseleave", function(e) {
+					console.log('mouse left!')
+					a.params.interact && a.removeHover();
+				})
+		},
+		drawPeaks: function(a, b) {
+			this.resetScroll(), this.setWidth(b), this.params.barWidth ? this.drawBars(a) : this.drawWave(a)
+		},
+		style: function(a, b) {
+			return Object.keys(b).forEach(function(c) {
+				a.style[c] !== b[c] && (a.style[c] = b[c])
+			}), a
+		},
+		// styleCurrent: function(a, b) {
+		// 	return Object.keys(b).forEach(function(c) {
+		// 		a.style[c] !== b[c] && (a.style[c] = '566px')
+		// 		console.log(a)
+		// 		console.log('newly assigned style', a.style[c])
+		// 	}), a
+		// },
+		resetScroll: function() {
+			null !== this.wrapper && (this.wrapper.scrollLeft = 0)
+		},
+		recenter: function(a) {
+			var b = this.wrapper.scrollWidth * a;
+			this.recenterOnPosition(b, !0)
+		},
+		recenterOnPosition: function(a, b) {
+			var c = this.wrapper.scrollLeft,
+				d = ~~(this.wrapper.clientWidth / 2),
+				e = a - d,
+				f = e - c,
+				g = this.wrapper.scrollWidth - this.wrapper.clientWidth;
+			if (0 != g) {
+				if (!b && f >= -d && d > f) {
+					var h = 5;
+					f = Math.max(-h, Math.min(h, f)), e = c + f
+				}
+				e = Math.max(0, Math.min(g, e)), e != c && (this.wrapper.scrollLeft = e)
+			}
+		},
+		getWidth: function() {
+			return Math.round(this.container.clientWidth * this.params.pixelRatio)
+		},
+		setWidth: function(a) {
+			a != this.width && (this.width = a, this.params.fillParent || this.params.scrollParent ? this.style(this.wrapper, {
+				width: ""
+			}) : this.style(this.wrapper, {
+				width: ~~(this.width / this.params.pixelRatio) + "px"
+			}), this.updateSize())
+		},
+		setHeight: function(a) {
+			a != this.height && (this.height = a, this.style(this.wrapper, {
+				height: ~~(this.height / this.params.pixelRatio) + "px"
+			}), this.updateSize())
+		},
+		progress: function(a) {
+			var b = 1 / this.params.pixelRatio,
+				c = Math.round(a * this.width) * b;
+
+			if (c < this.lastPos || c - this.lastPos >= b) {
+				if (this.lastPos = c, this.params.scrollParent) {
+					var d = ~~(this.wrapper.scrollWidth * a);
+					this.recenterOnPosition(d)
+				}
+				this.updateProgress(a)
+			}
+		},
+		progressHover: function(a) {
+			this.updateHover(a)
+		},
+		destroy: function() {
+			this.unAll(), this.wrapper && (this.container.removeChild(this.wrapper), this.wrapper = null)
+		},
+		createElements: function() {},
+		updateSize: function() {},
+		drawWave: function(a, b) {},
+		clearWave: function() {},
+		updateProgress: function(a) {}
 	},
-	destroy: function() {
-		this.unAll(), this.wrapper && (this.container.removeChild(this.wrapper), this.wrapper = null)
-	},
-	createElements: function() {},
-	updateSize: function() {},
-	drawWave: function(a, b) {},
-	clearWave: function() {},
-	updateProgress: function(a) {}
-}, WaveSurfer.util.extend(WaveSurfer.Drawer, WaveSurfer.Observer), WaveSurfer.Drawer.Canvas = Object.create(WaveSurfer.Drawer), WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
-	createElements: function() {
-		var a = this.wrapper.appendChild(this.style(document.createElement("canvas"), {
-			position: "absolute",
-			zIndex: 1,
-			left: 0,
-			top: 0,
-			bottom: 0
-		}));
-		if (this.waveCc = a.getContext("2d"), this.progressWave = this.wrapper.appendChild(this.style(document.createElement("wave"), {
+	WaveSurfer.util.extend(WaveSurfer.Drawer, WaveSurfer.Observer),
+	WaveSurfer.Drawer.Canvas = Object.create(WaveSurfer.Drawer),
+	WaveSurfer.util.extend(WaveSurfer.Drawer.Canvas, {
+		createElements: function() {
+			var a = this.wrapper.appendChild(this.style(document.createElement("canvas"), {
 				position: "absolute",
-				zIndex: 2,
+				zIndex: 1,
 				left: 0,
 				top: 0,
-				bottom: 0,
-				overflow: "hidden",
-				width: "0",
-				display: "none",
-				boxSizing: "border-box",
-				borderRightStyle: "solid",
-				borderRightWidth: this.params.cursorWidth + "px",
-				borderRightColor: this.params.cursorColor
-			})), this.params.waveColor != this.params.progressColor) {
-			var b = this.progressWave.appendChild(document.createElement("canvas"));
-			this.progressCc = b.getContext("2d")
-		}
-	},
-	updateSize: function() {
-		var a = Math.round(this.width / this.params.pixelRatio);
-		this.waveCc.canvas.width = this.width, this.waveCc.canvas.height = this.height, this.style(this.waveCc.canvas, {
-			width: a + "px"
-		}), this.style(this.progressWave, {
-			display: "block"
-		}), this.progressCc && (this.progressCc.canvas.width = this.width, this.progressCc.canvas.height = this.height, this.style(this.progressCc.canvas, {
-			width: a + "px"
-		})), this.clearWave()
-	},
-	clearWave: function() {
-		this.waveCc.clearRect(0, 0, this.width, this.height), this.progressCc && this.progressCc.clearRect(0, 0, this.width, this.height)
-	},
-	drawBars: function(a, b) {
-		if (a[0] instanceof Array) {
-			var c = a;
-			if (this.params.splitChannels) return this.setHeight(c.length * this.params.height * this.params.pixelRatio), void c.forEach(this.drawBars, this);
-			a = c[0]
-		}
-		var d = .5 / this.params.pixelRatio,
-			e = this.width,
-			f = this.params.height * this.params.pixelRatio,
-			g = f * b || 0,
-			h = f / 2,
-			i = ~~(a.length / 2),
-			j = this.params.barWidth * this.params.pixelRatio,
-			k = Math.max(this.params.pixelRatio, ~~(j / 2)),
-			l = j + k,
-			m = 1;
-		if (this.params.normalize) {
-			var n, o;
-			o = Math.max.apply(Math, a), n = Math.min.apply(Math, a), m = o, -n > m && (m = -n)
-		}
-		var p = i / e;
-		this.waveCc.fillStyle = this.params.waveColor, this.progressCc && (this.progressCc.fillStyle = this.params.progressColor), [this.waveCc, this.progressCc].forEach(function(b) {
-			if (b)
-				if (this.params.reflection)
-					for (var c = 0; e > c; c += l) {
-						var f = Math.round(a[2 * c * p] / m * h);
-						b.fillRect(c + d, h - f + g, j + d, 2 * f)
-					} else {
-						// top half
-						for (var c = 0; e > c; c += l) {
-							var f = Math.round(a[2 * c * p] / m * h);
-							b.fillRect(c + d, h - f + g, j + d, f) // fills in top half
-
-							// outline
-							// b.strokeStyle = "#00ff9f"; // light green
-							b.strokeStyle = "#66bdff"; // light blue
-							b.lineWidth = 1;
-
-							var x1 = c + d,
-								y1 = h - f + g,
-								x2 = c + j + (2 * d),
-								y2 = h - f + g
-
-							this.drawStroke(x1, y1, x2, y2, b);
-							this.drawStroke(x1, y1, x2 - j, y2 + f, b);
-							this.drawStroke(x2, y2, x2, y2 + f, b);
-						}
-						// bottom half
-						for (var c = 0; e > c; c += l) {
-							var f = Math.round(a[2 * c * p + 1] / m * h);
-							b.fillRect(c + d, h - f + g, j + d, f) // fills in bottom half
-
-							var x1 = c + d,
-								y1 = h - f + g,
-								x2 = c + j + (2 * d),
-								y2 = h - f + g
-
-							// outline
-							b.strokeStyle = "#66bdff"; // dark blue
-
-							this.drawStroke(x1, y1, x2, y2, b);
-							this.drawStroke(x1, y1, x2 - j, y2 + f, b);
-							this.drawStroke(x2, y2, x2, y2 + f, b);
-
-							// b.strokeStyle = "blue";
-							// b.lineWidth = 1;
-							// b.strokeRect(c + d, h - f + g, j + d, f);
-						}
-					}
-		}, this)
-	},
-	// Created this method to outline bars
-	drawStroke: function(x1, y1, x2, y2, ctx) {
-		ctx.beginPath();
-		ctx.moveTo(x1, y1);
-		ctx.lineTo(x2, y2);
-		ctx.stroke();
-	},
-	drawWave: function(a, b) {
-		if (a[0] instanceof Array) {
-			var c = a;
-			if (this.params.splitChannels) return this.setHeight(c.length * this.params.height * this.params.pixelRatio), void c.forEach(this.drawWave, this);
-			a = c[0]
-		}
-		var d = .5 / this.params.pixelRatio,
-			e = this.params.height * this.params.pixelRatio,
-			f = e * b || 0,
-			g = e / 2,
-			h = ~~(a.length / 2),
-			i = 1;
-		this.params.fillParent && this.width != h && (i = this.width / h);
-		var j = 1;
-		if (this.params.normalize) {
-			var k, l;
-			l = Math.max.apply(Math, a), k = Math.min.apply(Math, a), j = l, -k > j && (j = -k)
-		}
-		this.waveCc.fillStyle = this.params.waveColor, this.progressCc && (this.progressCc.fillStyle = this.params.progressColor), [this.waveCc, this.progressCc].forEach(function(b) {
-			if (b) {
-				b.beginPath(), b.moveTo(d, g + f);
-				for (var c = 0; h > c; c++) {
-					var e = Math.round(a[2 * c] / j * g);
-					b.lineTo(c * i + d, g - e + f)
-				}
-				for (var c = h - 1; c >= 0; c--) {
-					var e = Math.round(a[2 * c + 1] / j * g);
-					b.lineTo(c * i + d, g - e + f)
-				}
-				b.closePath(), b.fill(), b.fillRect(0, g + f - d, this.width, d)
+				bottom: 0
+			}));
+			if (this.waveCc = a.getContext("2d"), this.progressWave = this.wrapper.appendChild(this.style(document.createElement("wave"), {
+					position: "absolute",
+					zIndex: 2,
+					left: 0,
+					top: 0,
+					bottom: 0,
+					overflow: "hidden",
+					width: "0",
+					display: "none",
+					boxSizing: "border-box",
+					borderRightStyle: "solid",
+					borderRightWidth: this.params.cursorWidth + "px",
+					borderRightColor: this.params.cursorColor
+				})),
+				// display for hovering
+				this.hoverWave = this.wrapper.appendChild(this.style(document.createElement("hoverwave"), {
+					position: "absolute",
+					zIndex: 2,
+					left: 0,
+					top: 0,
+					bottom: 0,
+					overflow: "hidden",
+					width: "0",
+					display: "none",
+					boxSizing: "border-box",
+					borderRightStyle: "solid",
+					borderRightWidth: this.params.cursorWidth + "px",
+					borderRightColor: this.params.cursorColor
+				})), this.params.waveColor != this.params.progressColor) {
+				var b = this.progressWave.appendChild(document.createElement("canvas"));
+				this.progressCc = b.getContext("2d");
+				// hoverwave
+				var h = this.hoverWave.appendChild(document.createElement("canvas"));
+				this.hoverProgressCc = h.getContext("2d");
 			}
-		}, this)
-	},
-	updateProgress: function(a) {
-		var b = Math.round(this.width * a) / this.params.pixelRatio;
-		this.style(this.progressWave, {
-			width: b + "px"
-		})
-	}
-});
+		},
+		updateSize: function() {
+			var a = Math.round(this.width / this.params.pixelRatio);
+			this.waveCc.canvas.width = this.width, this.waveCc.canvas.height = this.height, this.style(this.waveCc.canvas, {
+					width: a + "px"
+				}), this.style(this.progressWave, {
+					display: "block"
+				}), this.progressCc && (this.progressCc.canvas.width = this.width, this.progressCc.canvas.height = this.height, this.style(this.progressCc.canvas, {
+					width: a + "px"
+				})), this.clearWave(),
+				// hoverwave
+				this.style(this.hoverWave, {
+					display: "block"
+				}), this.hoverProgressCc && (this.hoverProgressCc.canvas.width = this.width, this.hoverProgressCc.canvas.height = this.height, this.style(this.hoverProgressCc.canvas, {
+					width: a + "px"
+				}))
+		},
+		clearWave: function() {
+			this.waveCc.clearRect(0, 0, this.width, this.height), this.progressCc && this.progressCc.clearRect(0, 0, this.width, this.height),
+				// hoverwave
+				this.hoverProgressCc && this.hoverProgressCc.clearRect(0, 0, this.width, this.height)
+		},
+		// for smoothing out bar height data
+		smooth: function(array, alpha) {
+			var w_avg = this.average(array) * alpha;
+			var smoothed = [];
+			for (var i = 0; i < array.length; i++) {
+				var curr = array[i];
+				var prev = i > 0 ? smoothed[i - 1] : curr;
+				var next = i < array.length ? curr : array[i - 1];
+				var weighted = Number(this.average([w_avg, prev, curr, next]).toFixed(2));
+				smoothed.push(weighted);
+			}
+			return smoothed;
+		},
+		average: function(data) {
+			var sum = data.reduce(function(sum, value) {
+				return sum + value;
+			}, 0);
+
+			var avg = sum / data.length;
+			return avg;
+		},
+		drawBars: function(a, b) {
+			var z = this;
+			if (a[0] instanceof Array) {
+				var c = a;
+				if (this.params.splitChannels) return this.setHeight(c.length * this.params.height * this.params.pixelRatio), void c.forEach(this.drawBars, this);
+				a = c[0]
+			}
+			var d = .5 / this.params.pixelRatio,
+				e = this.width,
+				f = this.params.height * this.params.pixelRatio,
+				g = f * b || 0,
+				h = f / 2,
+				i = ~~(a.length / 2),
+				j = this.params.barWidth * this.params.pixelRatio,
+				k = Math.max(this.params.pixelRatio, ~~(j / 2)),
+				l = j + k,
+				m = 1;
+			if (this.params.normalize) {
+				var n, o;
+				o = Math.max.apply(Math, a), n = Math.min.apply(Math, a), m = o, -n > m && (m = -n)
+			}
+			var p = i / e;
+			var topHalfHeights = [];
+			var bottomHalfHeights = [];
+			var n_topHalfHeights;
+			var n_bottomHalfHeights;
+
+			this.waveCc.fillStyle = this.params.waveColor, this.progressCc && (this.progressCc.fillStyle = this.params.progressColor), [this.waveCc, this.progressCc].forEach(function(b) {
+					if (b)
+						if (this.params.reflection)
+							for (var c = 0; e > c; c += l) {
+								var f = Math.round(a[2 * c * p] / m * h);
+								b.fillRect(c + d, h - f + g, j + d, 2 * f);
+							} else {
+								// TOP HALF
+								for (var c = 0; e > c; c += l) {
+									var f = Math.round(a[2 * c * p] / m * h);
+									topHalfHeights.push(f);
+								}
+
+								console.log(topHalfHeights)
+								n_topHalfHeights = z.smooth(topHalfHeights, 1);
+								console.log('normalized top', n_topHalfHeights)
+
+								var xi = 0;
+								for (var c = 0; e > c; c += l) {
+									var f = n_topHalfHeights[xi++];
+									// b.fillRect(c + d, h - f + g, j + d, f) // fills in entire top half
+									b.fillRect(c + d, h - f + g, j - 2, f) // only fills partially
+
+									// OUTLINE
+									// b.strokeStyle = "#00ff9f"; // light green
+									b.strokeStyle = "#93d0ff"; // light blue
+									b.lineWidth = 1;
+
+									var x1 = c + d,
+										y1 = h - f + g,
+										x2 = c + j + (2 * d),
+										y2 = h - f + g
+
+									// this.drawStroke(x1, y1, x2, y2, b); // top edge
+									this.drawStroke(x1, y1, x2 - j, y2 + f, b); // left edge
+									// this.drawStroke(x2, y2, x2, y2 + f, b); // right edge
+								}
+
+								// BOTTOM HALF
+								for (var c = 0; e > c; c += l) {
+									var f = Math.round(a[2 * c * p + 1] / m * h);
+									bottomHalfHeights.push(f);
+								}
+
+								console.log(bottomHalfHeights)
+								n_bottomHalfHeights = z.smooth(bottomHalfHeights, 1);
+								console.log('normalized bottom', n_bottomHalfHeights)
+
+								var iy = 0;
+								for (var c = 0; e > c; c += l) {
+									var f = n_bottomHalfHeights[iy++];
+									// b.fillRect(c + d, h - f + g, j + d, f) // fills in bottom half
+									b.fillRect(c + d, h - f + g, j - 2, f) // only fills partially
+
+									var x1 = c + d,
+										y1 = h - f + g,
+										x2 = c + j + (2 * d),
+										y2 = h - f + g
+
+									// OUTLINE
+									b.strokeStyle = "#93d0ff"; // dark blue
+									// b.lineWidth = 2;
+									// b.strokeStyle = "#66bdff"; // light green
+
+									this.drawStroke(x1, y1, x2 - j, y2 + f, b); // used for reflection
+									// this.drawStroke(x1, y1, x2, y2, b);
+									// this.drawStroke(x2, y2, x2, y2 + f, b);
+
+									// b.strokeStyle = "blue";
+									// b.lineWidth = 1;
+									// b.strokeRect(c + d, h - f + g, j + d, f);
+								}
+								// console.log(bottomHalfHeights)
+							}
+				}, this),
+
+				//hover
+				this.hoverProgressCc && (this.hoverProgressCc.fillStyle = this.params.hoverColor), [this.waveCc, this.hoverProgressCc].forEach(function(b) {
+					if (b)
+						if (this.params.reflection)
+							for (var c = 0; e > c; c += l) {
+								var f = Math.round(a[2 * c * p] / m * h);
+								b.fillRect(c + d, h - f + g, j + d, 2 * f)
+							} else {
+								// top half
+								// for (var c = 0; e > c; c += l) {
+								// 	var f = Math.round(a[2 * c * p] / m * h);
+								// 	b.fillRect(c + d, h - f + g, j + d, f) // fills in top half
+
+								// 	// OUTLINE
+								// 	// b.strokeStyle = "#00ff9f"; // light green
+								// 	b.strokeStyle = "#66bdff"; // light blue
+								// 	b.lineWidth = 1;
+
+								// 	var x1 = c + d,
+								// 		y1 = h - f + g,
+								// 		x2 = c + j + (2 * d),
+								// 		y2 = h - f + g
+
+								// 	// this.drawStroke(x1, y1, x2, y2, b); // top edge
+								// 	this.drawStroke(x1, y1, x2 - j, y2 + f, b); // left edge
+								// 	// this.drawStroke(x2, y2, x2, y2 + f, b); // right edge
+								// }
+
+								// bottom half
+
+								// var c2 = 1000;
+								// var f2 = Math.round(a[2 * c2 * p + 1] / m * h);
+								// b.fillRect(c2 + d, h - f2 + g, j + d, f2);
+
+								var iy = 0;
+								for (var c = 0; e > c; c += l) {
+									var f = n_bottomHalfHeights[iy++];
+									// b.fillRect(c + d, h - f + g, j + d, f) // fills in bottom half
+									b.fillRect(c + d, h - f + g, j - 2, f) // only fills partially
+
+									var x1 = c + d,
+										y1 = h - f + g,
+										x2 = c + j + (2 * d),
+										y2 = h - f + g
+
+									// OUTLINE
+									// b.strokeStyle = "#66bdff"; // dark blue
+									// b.strokeStyle = "#ffffff"; // light green
+
+									// this.drawStroke(x1, y1, x2, y2, b);
+									// this.drawStroke(x1, y1, x2 - j, y2 + f, b);
+									// this.drawStroke(x2, y2, x2, y2 + f, b);
+
+									// b.strokeStyle = "blue";
+									// b.lineWidth = 1;
+									// b.strokeRect(c + d, h - f + g, j + d, f);
+								}
+							}
+				}, this)
+		},
+		// Created this method to outline bars
+		drawStroke: function(x1, y1, x2, y2, ctx) {
+			ctx.beginPath();
+			ctx.moveTo(x1, y1);
+			ctx.lineTo(x2, y2);
+			ctx.stroke();
+		},
+		drawWave: function(a, b) {
+			if (a[0] instanceof Array) {
+				var c = a;
+				if (this.params.splitChannels) return this.setHeight(c.length * this.params.height * this.params.pixelRatio), void c.forEach(this.drawWave, this);
+				a = c[0]
+			}
+			var d = .5 / this.params.pixelRatio,
+				e = this.params.height * this.params.pixelRatio,
+				f = e * b || 0,
+				g = e / 2,
+				h = ~~(a.length / 2),
+				i = 1;
+			this.params.fillParent && this.width != h && (i = this.width / h);
+			var j = 1;
+			if (this.params.normalize) {
+				var k, l;
+				l = Math.max.apply(Math, a), k = Math.min.apply(Math, a), j = l, -k > j && (j = -k)
+			}
+			this.waveCc.fillStyle = this.params.waveColor, this.progressCc && (this.progressCc.fillStyle = this.params.progressColor), [this.waveCc, this.progressCc].forEach(function(b) {
+				if (b) {
+					b.beginPath(), b.moveTo(d, g + f);
+					for (var c = 0; h > c; c++) {
+						var e = Math.round(a[2 * c] / j * g);
+						b.lineTo(c * i + d, g - e + f)
+					}
+					for (var c = h - 1; c >= 0; c--) {
+						var e = Math.round(a[2 * c + 1] / j * g);
+						b.lineTo(c * i + d, g - e + f)
+					}
+					b.closePath(), b.fill(), b.fillRect(0, g + f - d, this.width, d)
+				}
+			}, this)
+		},
+		updateProgress: function(a) {
+			var b = Math.round(this.width * a) / this.params.pixelRatio;
+			this.style(this.progressWave, {
+				width: b + "px"
+			})
+		},
+		// Hover update
+		updateHover: function(a) {
+			var b = Math.round(this.width * a) / this.params.pixelRatio;
+			this.style(this.hoverWave, {
+				width: b + "px",
+				// transition: '100ms'
+			});
+			// this.styleCurrent(this.hoverWave, {
+			// 	width: b + "px",
+			// 	// transition: '100ms'
+			// });
+		},
+		removeHover: function() {
+			this.updateHover(0);
+		}
+	});
 //# sourceMappingURL=wavesurfer.min.js.map

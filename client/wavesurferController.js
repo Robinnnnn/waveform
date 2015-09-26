@@ -1,6 +1,8 @@
 app.controller('WavesurferController', function($scope) {
 	// createWavesurfer()
-	// $scope.loadingMessage = true;
+	$scope.loadingMessage = 'Loading... 0%';
+	$scope.duration;
+	$scope.currentTime;
 
 	wavesurfer.on('loading', function(progress, data) {
 		$scope.loadingMessage = 'Loading... ' + progress + '%'
@@ -10,6 +12,8 @@ app.controller('WavesurferController', function($scope) {
 	wavesurfer.on('ready', function() {
 		console.log('it\'s ready!')
 		$scope.loadingMessage = false;
+		$scope.totalSeconds = ~~(wavesurfer.getDuration())
+		$scope.duration = convertSecondsToStandardFormat($scope.totalSeconds);
 		$scope.$apply();
 		$scope.playPause = function() {
 			wavesurfer.playPause();
@@ -20,4 +24,25 @@ app.controller('WavesurferController', function($scope) {
 		// var lowpass = wavesurfer.backend.ac.createBiquadFilter();
 		// wavesurfer.backend.setFilter(lowpass);
 	});
+
+	wavesurfer.on('seek', function(timeRatio) {
+		var seekedTime = Math.floor(timeRatio * $scope.totalSeconds);
+		$scope.currentTime = convertSecondsToStandardFormat(seekedTime);
+		$scope.$apply();
+	})
+
+	wavesurfer.on('audioprocess', function(data) {
+		var currentTime = ~~(wavesurfer.getCurrentTime())
+		$scope.currentTime = convertSecondsToStandardFormat(currentTime);
+		$scope.$apply();
+	})
 });
+
+function convertSecondsToStandardFormat(seconds) {
+	var minutes = ~~(seconds / 60);
+	var seconds = seconds % 60;
+	if (seconds < 10) {
+		seconds = "0" + seconds;
+	}
+	return minutes + ':' + seconds;
+}
