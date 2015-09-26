@@ -57,7 +57,6 @@ var WaveSurfer = {
 		}), this.backend.on("pause", function() {
 			a.fireEvent("pause")
 		}), this.backend.on("audioprocess", function(b) {
-			// console.log('processing', a.backend.getPlayedPercents())
 			a.drawer.progress(a.backend.getPlayedPercents()), a.fireEvent('audioprocess', b)
 		})
 	},
@@ -271,8 +270,6 @@ WaveSurfer.create = function(a) {
 			return this.on(a, d)
 		},
 		fireEvent: function(a) {
-			// console.log('firing', a)
-			// console.log('the handlers are', this.handlers)
 			if (this.handlers) {
 				var b = this.handlers[a],
 					c = Array.prototype.slice.call(arguments, 1);
@@ -755,15 +752,14 @@ WaveSurfer.create = function(a) {
 									topHalfHeights.push(f);
 								}
 
-								console.log(topHalfHeights)
+								// smooth it out baby
 								n_topHalfHeights = z.smooth(topHalfHeights, 1);
-								console.log('normalized top', n_topHalfHeights)
 
 								var xi = 0;
 								for (var c = 0; e > c; c += l) {
 									var f = n_topHalfHeights[xi++];
 									// b.fillRect(c + d, h - f + g, j + d, f) // fills in entire top half
-									b.fillRect(c + d, h - f + g, j - 2, f) // only fills partially
+									b.fillRect(c + d, h - f + g, j - 2, f) // only fills partial width
 
 									// OUTLINE
 									// b.strokeStyle = "#00ff9f"; // light green
@@ -786,15 +782,13 @@ WaveSurfer.create = function(a) {
 									bottomHalfHeights.push(f);
 								}
 
-								console.log(bottomHalfHeights)
 								n_bottomHalfHeights = z.smooth(bottomHalfHeights, 1);
-								console.log('normalized bottom', n_bottomHalfHeights)
 
 								var iy = 0;
 								for (var c = 0; e > c; c += l) {
 									var f = n_bottomHalfHeights[iy++];
 									// b.fillRect(c + d, h - f + g, j + d, f) // fills in bottom half
-									b.fillRect(c + d, h - f + g, j - 2, f) // only fills partially
+									b.fillRect(c + d, h - f + g, j - 2, f) // only fills partial width
 
 									var x1 = c + d,
 										y1 = h - f + g,
@@ -814,7 +808,6 @@ WaveSurfer.create = function(a) {
 									// b.lineWidth = 1;
 									// b.strokeRect(c + d, h - f + g, j + d, f);
 								}
-								// console.log(bottomHalfHeights)
 							}
 				}, this),
 

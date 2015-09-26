@@ -9,8 +9,11 @@
 	<body ng-app="WavesurferApp" ng-controller="WavesurferController">
 		<div ng-show="loadingMessage">{{ loadingMessage }}</div>
 		<div id="track0"></div>
-		<button ng-click="playPause()">play</button>
-		<div ng-show="!loadingMessage">{{ currentTime || '0:00' }} / {{ duration }}</div>
+		<div id="track1"></div>
+		<div class="track-options">
+			<button ng-click="playPause()">play</button>
+			<div ng-show="!loadingMessage">{{ currentTime || '0:00' }} / {{ duration }}</div>
+		</div>
 		<!-- <script src="https://connect.soundcloud.com/sdk-2.0.0.js"></script>
 		<script src="generator.js"></script>-->
 		<script src="wavesurfer.js"></script>
