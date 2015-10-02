@@ -1,5 +1,3 @@
-var wavesurfer;
-var n_track = 0;
 var trackUrls = ['/audio/Lullabies (Adventure Club Remix).mp3', 'https://dl.dropbox.com/s/bxfdcacy6w9bjug/phazz.mp3']
 var waveforms = [];
 
@@ -21,7 +19,6 @@ function createWavesurfer(link, index) {
 		// reflection: true
 	});
 
-	// wavesurfer.load('https://dl.dropbox.com/s/bxfdcacy6w9bjug/phazz.mp3');
 	waveforms[index++].load(link);
 };
 

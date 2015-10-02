@@ -697,17 +697,17 @@ WaveSurfer.create = function(a) {
 			var smoothed = [];
 			for (var i = 0; i < array.length; i++) {
 				var curr = array[i];
-				var prev = i > 0 ? smoothed[i - 1] : curr;
-				var next = i < array.length ? curr : array[i - 1];
+				var prev = smoothed[i - 1] || array[array.length - 1];
+				var next = curr || array[i - 1];
 				var weighted = Number(this.average([w_avg, prev, curr, next]).toFixed(2));
 				smoothed.push(weighted);
 			}
 			return smoothed;
 		},
 		average: function(data) {
-			var sum = data.reduce(function(sum, value) {
-				return sum + value;
-			}, 0);
+			var sum = data.reduce((sum, v) => {
+				return sum + v
+			}, 0)
 
 			var avg = sum / data.length;
 			return avg;
@@ -753,7 +753,7 @@ WaveSurfer.create = function(a) {
 								}
 
 								// smooth it out baby
-								n_topHalfHeights = z.smooth(topHalfHeights, 1);
+								n_topHalfHeights = z.smooth(topHalfHeights, 1.00);
 
 								var xi = 0;
 								for (var c = 0; e > c; c += l) {
@@ -782,7 +782,7 @@ WaveSurfer.create = function(a) {
 									bottomHalfHeights.push(f);
 								}
 
-								n_bottomHalfHeights = z.smooth(bottomHalfHeights, 1);
+								n_bottomHalfHeights = z.smooth(bottomHalfHeights, 1.00);
 
 								var iy = 0;
 								for (var c = 0; e > c; c += l) {
